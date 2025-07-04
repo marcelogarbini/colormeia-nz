@@ -1,77 +1,81 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { OpenAI } from "openai"
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-// Inicializar o cliente OpenAI
+// Inicializa o cliente da OpenAI com a chave do arquivo .env.local
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-})
+});
 
-export async function POST(request: NextRequest) {
+// A função que lida com o envio do formulário
+export async function POST(request: Request) {
   try {
-    // Obter a imagem do corpo da requisição
-    const formData = await request.formData()
-    const imageFile = formData.get("image") as File
+    const formData = await request.formData();
+    const photo = formData.get('photo') as File;
 
-    if (!imageFile) {
-      return NextResponse.json({ error: "Nenhuma imagem foi enviada" }, { status: 400 })
+    if (!photo) {
+      return NextResponse.json({ error: 'Foto é obrigatória.' }, { status: 400 });
     }
 
-    // Converter a imagem para base64
-    const bytes = await imageFile.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    const base64Image = buffer.toString("base64")
+    // Converte a imagem para Base64 para que possamos enviá-la para a IA
+    const buffer = Buffer.from(await photo.arrayBuffer());
+    const base64Image = buffer.toString('base64');
+    const dataUrl = `data:${photo.type};base64,${base64Image}`;
 
-    // Preparar a instrução para o modelo
-    const instruction = `Você é um especialista em análise de coloração pessoal. Sua tarefa é analisar a imagem fornecida e determinar com precisão a cartela de coloração da pessoa com base nas seguintes etapas:
-    1. Identifique:
-    - Tom da pele
-    - Subtom da pele
-    - Cor e intensidade dos olhos
-    - Cor, tonalidade e textura do cabelo
-    2. Classifique o indivíduo em uma das seguintes cartelas sazonais: 
-    Primavera Clara, Primavera Intensa, Primavera Pura,
-    Verão Claro, Verão Suave, Verão Puro,
-    Outono Suave, Outono Profundo, Outono Puro,
-    Inverno Profundo, Inverno Intenso, Inverno Puro.
-    3. Responda no seguinte formato:
-    Cartela Identificada: [NOME DA CARTELA]
-    Resumo da Análise: [parágrafo com até 4 frases, explicando com clareza as características físicas e justificando a escolha da cartela].
-    Não adicione informações fora desse formato. Baseie-se exclusivamente na imagem enviada.`
+    // Este é o prompt que instrui a IA. É a parte mais importante!
+    const prompt = `
+      Você é um especialista de renome mundial em análise de coloração pessoal, 
+      com décadas de experiência em moda e visagismo. Sua tarefa é analisar a 
+      foto de um rosto e determinar com precisão a paleta de cores sazonal 
+      da pessoa (ex: Inverno Frio, Outono Quente, etc.).
 
-    // Fazer a requisição para a API do OpenAI
+      Analise os seguintes aspectos na imagem:
+      1.  **Subtom de Pele:** Identifique se é quente (amarelado/dourado), frio (rosado/azulado) ou neutro.
+      2.  **Profundidade:** Avalie se as cores gerais são claras, médias ou escuras.
+      3.  **Contraste:** Observe o nível de contraste entre a cor da pele, do cabelo e dos olhos (baixo, médio ou alto).
+
+      Com base na sua análise detalhada, retorne um objeto JSON estritamente no seguinte formato:
+      {
+        "cartela": "O nome da paleta sazonal principal",
+        "resumo": "Um parágrafo curto e amigável explicando por que a pessoa se encaixa nessa cartela, mencionando o subtom e o contraste encontrados.",
+        "caracteristicas": {
+          "subtom": "Quente, Frio ou Neutro",
+          "profundidade": "Clara, Média ou Escura",
+          "contraste": "Baixo, Médio ou Alto"
+        }
+      }
+    `;
+
+    // Chamada para a API da OpenAI
     const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
+      model: 'gpt-4o', // O modelo 'gpt-4o' é excelente para analisar imagens
+      response_format: { type: 'json_object' }, // Garante que a resposta será um JSON válido
       messages: [
         {
-          role: "user",
+          role: 'system',
+          content: prompt,
+        },
+        {
+          role: 'user',
           content: [
-            { type: "text", text: instruction },
+            { type: 'text', text: 'Por favor, analise a pessoa nesta foto.' },
             {
-              type: "image_url",
+              type: 'image_url',
               image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
+                url: dataUrl,
               },
             },
           ],
         },
       ],
-      max_tokens: 500,
-    })
+    });
 
-    // Extrair o resultado da análise
-    const analysisText = response.choices[0].message.content || ""
+    // Extrai e retorna a resposta da IA para o frontend
+    const analysisResult = JSON.parse(response.choices[0].message.content || '{}');
 
-    // Processar o texto para extrair a cartela e o resumo
-    const cartelaMatch = analysisText.match(/Cartela Identificada: (.+)/)
-    const resumoMatch = analysisText.match(/Resumo da Análise: (.+)/)
+    return NextResponse.json({ success: true, analysis: analysisResult }, { status: 200 });
 
-    const cartela = cartelaMatch ? cartelaMatch[1].trim() : "Não identificada"
-    const resumo = resumoMatch ? resumoMatch[1].trim() : "Não foi possível gerar um resumo."
-
-    // Retornar o resultado
-    return NextResponse.json({ cartela, resumo })
   } catch (error) {
-    console.error("Erro ao analisar a imagem:", error)
-    return NextResponse.json({ error: "Erro ao processar a análise" }, { status: 500 })
+    console.error('❌ ERRO NA API DA OPENAI:', error);
+    return NextResponse.json({ error: 'Falha ao analisar a imagem.' }, { status: 500 });
   }
 }

@@ -18,7 +18,7 @@ export async function generatePersonalizedPdf(data: PdfGenerationData): Promise<
 
   // Adicionar título
   doc.setFontSize(24)
-  doc.setTextColor(59, 130, 246) // Cor primária
+  doc.setTextColor(66, 133, 244) // Azul do logo
   doc.text("ColorMe-IA", 105, 20, { align: "center" })
 
   doc.setFontSize(16)
@@ -39,7 +39,7 @@ export async function generatePersonalizedPdf(data: PdfGenerationData): Promise<
 
   // Adicionar cartela identificada
   doc.setFontSize(18)
-  doc.setTextColor(59, 130, 246)
+  doc.setTextColor(66, 133, 244) // Azul do logo
   doc.text(`Cartela Identificada: ${data.cartela}`, 20, 65)
 
   // Adicionar resumo da análise
@@ -52,7 +52,7 @@ export async function generatePersonalizedPdf(data: PdfGenerationData): Promise<
 
   // Adicionar paleta de cores
   doc.setFontSize(16)
-  doc.setTextColor(59, 130, 246)
+  doc.setTextColor(66, 133, 244) // Azul do logo
   doc.text("Sua Paleta de Cores", 20, 110)
 
   // Obter cores da paleta
@@ -90,7 +90,7 @@ export async function generatePersonalizedPdf(data: PdfGenerationData): Promise<
   const startRecommendationsY = startY + Math.ceil(colors.length / colorsPerRow) * (colorSize + 20) + 20
 
   doc.setFontSize(16)
-  doc.setTextColor(59, 130, 246)
+  doc.setTextColor(66, 133, 244) // Azul do logo
   doc.text("Recomendações", 20, startRecommendationsY)
 
   // Adicionar texto de recomendações específicas para a cartela
@@ -102,7 +102,7 @@ export async function generatePersonalizedPdf(data: PdfGenerationData): Promise<
 
   Object.entries(recommendations).forEach(([category, text]) => {
     doc.setFontSize(12)
-    doc.setTextColor(59, 130, 246)
+    doc.setTextColor(66, 133, 244) // Azul do logo
     doc.text(category, 20, currentY)
     currentY += 5
 
@@ -125,6 +125,16 @@ export async function generatePersonalizedPdf(data: PdfGenerationData): Promise<
 function getRecommendationsForPalette(cartela: string): Record<string, string> {
   // Recomendações específicas para cada cartela
   const recommendations: Record<string, Record<string, string>> = {
+    "Verão Suave": {
+      Roupas:
+        "A paleta Verão Suave é caracterizada por cores suaves e frias. Opte por tons pastéis como lavanda, azul bebê, rosa claro e verde menta. Evite cores muito vibrantes ou escuras, pois podem criar um contraste muito forte com sua aparência natural.",
+      Maquiagem:
+        "Para maquiagem, escolha tons suaves de rosa, malva e pêssego para os lábios. Sombras em tons de lavanda, cinza suave ou azul claro valorizam seus olhos. Blush em tons de rosa suave complementam perfeitamente seu subtom.",
+      Acessórios:
+        "Prefira joias em prata ou ouro branco, que harmonizam com o subtom frio da sua pele. Pérolas e pedras em tons suaves como água-marinha, ametista clara e quartzo rosa são excelentes escolhas.",
+      Cabelo:
+        "Para coloração de cabelo, opte por tons naturais com subtom frio, como castanho médio acinzentado, loiro cinza ou loiro platinado. Evite tons dourados ou acobreados, que podem criar dissonância com seu subtom.",
+    },
     "Inverno Escuro": {
       Roupas:
         "A profundidade da paleta de cores do Inverno Escuro é melhor destacada quando você usa suas cores em combinações de alto contraste. Esse nível de contraste reflete o alto contraste já presente na sua aparência natural, criando um visual harmonioso e poderoso.",
